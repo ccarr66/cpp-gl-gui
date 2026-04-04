@@ -1,0 +1,20 @@
+{
+  "dependencies": [
+    "fftw3",
+    "fmt",
+    "glew",
+    "glfw3",
+    "glm",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding",
+        "sdl2-binding"
+      ]
+    },
+    "opengl",
+    "sdl2",
+    "stb"
+  ]
+}

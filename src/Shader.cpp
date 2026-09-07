@@ -11,7 +11,7 @@
 
 #include <GL/glew.h>
 
-Shader::Shader(const string& filepath)
+Shader::Shader(const std::filesystem::path& filepath)
 	: m_FilePath(filepath), m_RendererID(0)
 {
 	//Creates shader from file
@@ -71,7 +71,7 @@ void Shader::SetUniformMat4f(const string& name, const glm::mat4& matrix)
 	GLCall(glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, &matrix[0][0]));
 }
 
-ShaderProgramSource Shader::ParseShader(const string& filepath)
+ShaderProgramSource Shader::ParseShader(const std::filesystem::path& filepath)
 {
 	std::ifstream ifstream(filepath);
 

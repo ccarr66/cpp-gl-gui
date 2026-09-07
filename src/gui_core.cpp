@@ -221,7 +221,9 @@ void SetNextUserInputStringWidth(float width)
     }
 }
 
-static const string ui_state_filename = "gui_state.txt";
+static const string DEFAULT_UI_STATE_FILENAME = "gui_state.txt";
+static constexpr size_t MAX_NUM_UI_ELEMENTS = 0xffff;
+
 static bool userInputLabelsAreLoaded = false;
 static std::vector<string> userInputLabels;
 
@@ -245,15 +247,15 @@ const string& getUILabel(const UserInputToken& token)
 
 static inline std::filesystem::path getUIStatePath()
 {
-    return app_info::getExecutablePath().parent_path() / ui_state_filename;
+    return app_info::getExecutablePath().parent_path() / DEFAULT_UI_STATE_FILENAME;
 }
 
 void updateUIStateOnDisk()
 {
     static const auto path = getUIStatePath();
-    auto ofs = FileObjOutputOverwriteHandle(HEADER_SETUP(defaultHeaderSetupCallback), path, BIN_FILE_MODE);
+    auto ofs = FileObjOutputOverwriteHandle(HEADER_NOT_NEEDED, path, TEXT_FILE_MODE);
 
-    ofs << (size_t)userInputLabels.size();
+    ofs << (size_t)userInputLabels.size() << "\n";
     for (auto label : userInputLabels) {
         ofs << label << "\n";
     }
@@ -270,19 +272,27 @@ void loadUIStateFromDisk()
     static const auto path = getUIStatePath();
     if ((!userInputLabelsAreLoaded)&&(fileExists(path)))
     {
-        auto ifs = FileObjInputHandle(HEADER_SETUP(defaultHeaderSetupCallback), path, BIN_FILE_MODE);
+        auto ifs = FileObjInputHandle(HEADER_NOT_NEEDED, path, TEXT_FILE_MODE);
 
         userInputLabels.clear();
 
-        size_t numLabels;
-        FileObj::read(ifs, &numLabels);
-        for (size_t idx = 0; idx < numLabels; idx++) {
-            string label;
-		    std::getline(ifs, label);
-            userInputLabels.push_back(label);
+        string numLabels_str;
+        std::getline(ifs, numLabels_str);
+        size_t numLabels = std::stoi(numLabels_str);
+
+        if (numLabels <= MAX_NUM_UI_ELEMENTS) {
+            for (size_t idx = 0; idx < numLabels; idx++) {
+                string label;
+                std::getline(ifs, label);
+                userInputLabels.push_back(label);
+            }
+            userInputLabelsAreLoaded=true;
+        }
+        else
+        {
+            ErrorHandler::FatalError("Invalid UI Element count! Likely UI state is corrupt");
         }
         ifs.close();
-        userInputLabelsAreLoaded=true;
     }
 }
 
@@ -359,24 +369,21 @@ bool updateUserInputString(const UserInputToken& token, string& updatedString, b
     return stringUpdated; //(openPopup);
 } 
 
-void removeDirectoryContents(const string& directory) {
-	const auto dirPath = std::filesystem::path(directory);
-	if (!safeToRemove(dirPath)) {
+void removeDirectoryContents(const std::filesystem::path& directory) {
+	if (!safeToRemove(directory)) {
 		return;
 	}
-
-	// Iterate over directory contents and remove them all
-	for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
+	for (const auto& entry : std::filesystem::directory_iterator(directory)) {
 		std::filesystem::remove_all(entry);
 	}
 }
 
 
-void removeFile(const string& filePath) {
+void removeFile(const std::filesystem::path& filePath) {
     if (!parentDirectorySafeToDelete(filePath)) {
         return;
     }
-	std::filesystem::remove(std::filesystem::path(filePath));
+	std::filesystem::remove(filePath);
 }
 
 
@@ -1024,9 +1031,9 @@ GuiGenerator_t gui_state_machine()
                 case GuiInternalValidState_t::rendering:
                     render();
                     localValidState = GuiInternalValidState_t::frameInit; //conceptual not functional, probably optimmized out idc
-
                     //deliberate fall through, need to prep next frame 
                     //for gui client code to do its stuff
+                    [[fallthrough]];
                 case GuiInternalValidState_t::frameInit:
                     frameInit();
                     localValidState = GuiInternalValidState_t::rendering;

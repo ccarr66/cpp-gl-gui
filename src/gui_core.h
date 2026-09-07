@@ -132,9 +132,9 @@ UserInputToken ObtainUserInputToken(const string&);
 
 bool updateUserInputString(const UserInputToken&, string&, bool (*)(const string&));
 
-void removeDirectoryContents(const string&);
+void removeDirectoryContents(const std::filesystem::path&);
 
-void removeFile(const string&); 
+void removeFile(const std::filesystem::path&); 
 
 // Function to find a texture by name in the global store
 texture_id_t findTextureByName(const string&);
